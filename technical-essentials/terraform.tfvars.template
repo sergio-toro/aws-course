@@ -1,0 +1,9 @@
+aws_region  = "eu-south-2"
+environment = "dev"
+
+ec2_public_key         = "<SSH Public Key>" // Generate with "ssh-keygen -m PEM"budget.tf
+keybase_username       = "<a valid keybase username>" // e.g You can use "storo" but you won't be able to decrypt the passwords
+cloudwatch_alarm_email = "<email to send alarm notifications>" // Default "HCMonitor@HeavenClassics.com"
+
+TECHNICAL_ESSENTIALS_AWS_ACCESS_KEY_ID     = "<AWS Access key ID>"
+TECHNICAL_ESSENTIALS_AWS_SECRET_ACCESS_KEY = "<AWS Secret Access Key>"
