@@ -20,4 +20,9 @@ variable "ec2_public_key" {
   description = "The public_key to use to connect to the EC2 instance"
   type        = string
 }
+variable "keybase_username" {
+  description = "The Keybase username to encrypt the password with"
+  type        = string
+}
+
 
