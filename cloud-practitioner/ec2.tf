@@ -70,3 +70,35 @@ resource "aws_instance" "cloud_practitioner" {
     Name = "${var.environment}-cloud-practitioner"
   })
 }
+
+
+resource "aws_sns_topic" "cpu_low_alarm_topic" {
+  name = "${var.environment}-cloud_practitioner-cpu-low-alarm-topic"
+
+  tags = local.tags
+}
+
+resource "aws_sns_topic_subscription" "cpu_low_alarm_topic_subscription" {
+  topic_arn = aws_sns_topic.cpu_low_alarm_topic.arn
+  protocol  = "email"
+  # endpoint  = "HCMonitor@HeavenClassics.com"
+  endpoint = "sergio@oliva.health"
+}
+
+resource "aws_cloudwatch_metric_alarm" "cpu_low_alarm" {
+  alarm_name          = "${var.environment}-cloud_practitioner-cpu-low-alarm"
+  comparison_operator = "LessThanOrEqualToThreshold" // Real alarm should be "GreaterThanOrEqualToThreshold"
+  evaluation_periods  = "3"
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = "300"
+  statistic           = "Average"
+  threshold           = "3" // Real alarm should be something like "80"
+  alarm_description   = "This metric checks if CPU utilization is less than 3% for 3 consecutive periods of 5 minutes"
+  alarm_actions       = [aws_sns_topic.cpu_low_alarm_topic.arn]
+  dimensions = {
+    InstanceId = aws_instance.cloud_practitioner.id
+  }
+
+  tags = local.tags
+}
