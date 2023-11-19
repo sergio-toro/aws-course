@@ -45,8 +45,8 @@ data "aws_ami" "amazon_linux_2023" {
 }
 
 # Use the correct private key to connect to the EC2 instance:
-# ssh -i ~/.ssh/id_rsa ec2-user@${aws_instance.cloud_practitioner.public_ip}
-resource "aws_instance" "cloud_practitioner" {
+# ssh -i ~/.ssh/id_rsa ec2-user@${aws_instance.technical_essentials.public_ip}
+resource "aws_instance" "technical_essentials" {
   ami           = data.aws_ami.amazon_linux_2023.id
   instance_type = "t3.micro" # This instance type is eligible for the free tier
 
@@ -57,23 +57,23 @@ resource "aws_instance" "cloud_practitioner" {
   associate_public_ip_address = true
 
   root_block_device {
-    delete_on_termination = false
+    delete_on_termination = true
 
     encrypted   = true
     volume_size = 10
     tags = merge(local.tags, {
-      Name = "${var.environment}-cloud-practitioner-volume"
+      Name = "${var.environment}-technical_essentials-volume"
     })
   }
 
   tags = merge(local.tags, {
-    Name = "${var.environment}-cloud-practitioner"
+    Name = "${var.environment}-technical_essentials"
   })
 }
 
 
 resource "aws_sns_topic" "cpu_low_alarm_topic" {
-  name = "${var.environment}-cloud_practitioner-cpu-low-alarm-topic"
+  name = "${var.environment}-technical_essentials-cpu-low-alarm-topic"
 
   tags = local.tags
 }
@@ -81,12 +81,11 @@ resource "aws_sns_topic" "cpu_low_alarm_topic" {
 resource "aws_sns_topic_subscription" "cpu_low_alarm_topic_subscription" {
   topic_arn = aws_sns_topic.cpu_low_alarm_topic.arn
   protocol  = "email"
-  # endpoint  = "HCMonitor@HeavenClassics.com"
-  endpoint = "sergio@oliva.health"
+  endpoint  = var.cloudwatch_alarm_email
 }
 
 resource "aws_cloudwatch_metric_alarm" "cpu_low_alarm" {
-  alarm_name          = "${var.environment}-cloud_practitioner-cpu-low-alarm"
+  alarm_name          = "${var.environment}-technical_essentials-cpu-low-alarm"
   comparison_operator = "LessThanOrEqualToThreshold" // Real alarm should be "GreaterThanOrEqualToThreshold"
   evaluation_periods  = "3"
   metric_name         = "CPUUtilization"
@@ -97,7 +96,7 @@ resource "aws_cloudwatch_metric_alarm" "cpu_low_alarm" {
   alarm_description   = "This metric checks if CPU utilization is less than 3% for 3 consecutive periods of 5 minutes"
   alarm_actions       = [aws_sns_topic.cpu_low_alarm_topic.arn]
   dimensions = {
-    InstanceId = aws_instance.cloud_practitioner.id
+    InstanceId = aws_instance.technical_essentials.id
   }
 
   tags = local.tags

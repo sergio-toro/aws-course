@@ -1,5 +1,5 @@
-output "cloud_practitioner_ec2_ip" {
-  value     = aws_instance.cloud_practitioner.public_ip
+output "technical_essentials_ec2_ip" {
+  value     = aws_instance.technical_essentials.public_ip
   sensitive = false
 }
 

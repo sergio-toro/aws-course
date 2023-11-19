@@ -11,6 +11,6 @@ terraform {
 
 provider "aws" {
   region     = var.aws_region
-  access_key = var.CLOUD_PRACTITIONER_AWS_ACCESS_KEY_ID
-  secret_key = var.CLOUD_PRACTITIONER_AWS_SECRET_ACCESS_KEY
+  access_key = var.TECHNICAL_ESSENTIALS_AWS_ACCESS_KEY_ID
+  secret_key = var.TECHNICAL_ESSENTIALS_AWS_SECRET_ACCESS_KEY
 }
