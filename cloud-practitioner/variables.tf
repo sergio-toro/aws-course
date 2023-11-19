@@ -16,4 +16,8 @@ variable "environment" {
   description = "The environment"
   type        = string
 }
+variable "ec2_public_key" {
+  description = "The public_key to use to connect to the EC2 instance"
+  type        = string
+}
 
