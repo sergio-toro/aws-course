@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Parameters:
+  Env:
+    Type: String
+    Description: The environment name
+  BaseAmiId:
+    Type: String
+    Description: The ID of the base AMI
+
+  SSHPublicKey:
+    Type: String
+    Description: The public key to use for SSH
+
+  DbPassword:
+    Type: String
+    Description: The password to use for the MySQL database
+
+Resources:
+  WebServerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Security group for Web Server
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+
+  SSHSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Security group for SSH
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  SSHKeyPair:
+    Type: "AWS::EC2::KeyPair"
+    Properties:
+      KeyName: SSHKeyPair
+      PublicKeyMaterial: !Ref SSHPublicKey
+
+  WordPressInstance:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: !Ref BaseAmiId
+      InstanceType: t3.micro
+      SecurityGroupIds:
+        - !Ref SSHSecurityGroup
+        - !Ref WebServerSecurityGroup
+      KeyName: !Ref SSHKeyPair
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          # Version: 1.0
+          sudo dnf update -y
+          sudo dnf install wget httpd php php-mysqlnd mariadb105-server -y
+          # Install MariaDB
+          sudo systemctl start mariadb
+          sudo systemctl enable mariadb
+          sudo mysql -e "CREATE DATABASE wordpress;"
+          sudo mysql -e "CREATE USER 'admin'@'localhost' IDENTIFIED BY '${DbPassword}';"
+          sudo mysql -e "CREATE USER 'wordpress'@'localhost' IDENTIFIED BY '${DbPassword}';"
+          sudo mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'admin'@'localhost';"
+          sudo mysql -e "GRANT ALL PRIVILEGES ON wordpress.* TO 'wordpress'@'localhost';"
+          sudo mysql -e "FLUSH PRIVILEGES;"
+
+          # Install WordPress
+          wget https://wordpress.org/latest.tar.gz
+          tar -xvzf latest.tar.gz
+          sudo mv wordpress/* /var/www/html/
+          sudo chown -R apache:apache /var/www/html/
+          sudo chmod -R 755 /var/www/html/
+          sudo mv /var/www/html/wp-config-sample.php /var/www/html/wp-config.php
+          sudo sed -i "s/database_name_here/wordpress/" /var/www/html/wp-config.php
+          sudo sed -i "s/username_here/wordpress/" /var/www/html/wp-config.php
+          sudo sed -i "s/password_here/${DbPassword}/" /var/www/html/wp-config.php
+          sudo sed -i "s/localhost/127.0.0.1/" /var/www/html/wp-config.php
+          sudo sed -i "s/put your unique phrase here/$(openssl rand -base64 16)/" /var/www/html/wp-config.php
+
+          # Install phpMyAdmin
+          wget https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.zip
+          sudo unzip phpMyAdmin-5.2.1-all-languages.zip
+          sudo mv phpMyAdmin-5.2.1-all-languages /var/www/html/phpmyadmin
+          sudo cp /var/www/html/phpmyadmin/config.sample.inc.php /var/www/html/phpmyadmin/config.inc.php
+          sudo sed -i "s/\['blowfish_secret'\] = ''/\['blowfish_secret'\] = '$(openssl rand -base64 32)'/" /var/www/html/phpmyadmin/config.inc.php
+          sudo sed -i "s/\['host'\] = 'localhost'/\['host'\] = '127.0.0.1'/" /var/www/html/phpmyadmin/config.inc.php
+
+          # Start Apache
+          sudo systemctl start httpd
+          sudo systemctl enable httpd
+      Tags:
+        - Key: Name
+          Value: !Sub "WordPress-${Env}"
+
+Outputs:
+  WordPressInstance:
+    Description: The ID of the WordPress instance
+    Value: !Ref WordPressInstance
+
+  WordPressInstanceIp:
+    Description: The IP address of the WordPress instance
+    Value: !GetAtt WordPressInstance.PublicIp
