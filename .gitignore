@@ -20,3 +20,6 @@ tfplan
 # Ignore CLI configuration files
 .terraformrc
 terraform.rc
+
+# ignore zip files
+**/lambda/*.zip
